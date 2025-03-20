@@ -1,4 +1,4 @@
-## Setup conda environment
+## Setup conda environment 
 
 Follow miniconda installation tutorial: https://www.anaconda.com/docs/getting-started/miniconda/install
 
