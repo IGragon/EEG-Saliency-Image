@@ -1,0 +1,36 @@
+model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+
+weight_dtype: fp32
+
+unet_lora_config:
+  _target_: peft.LoraConfig
+  r: 8
+  lora_alpha: 8
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 1e-4
+
+lr_scheduler: null
+
+criterion:
+  _target_: torch.nn.MSELoss
+
+
+batch_size: 4
+dataset:
+  _target_: src.datasets.EEGEmbToImgDataset
+  image_latents_folder: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/training_images_latents
+  subject_eeg_embeddings: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/emb_eeg/ATM_S_eeg_features_sub-01_train.pt
+
+save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs
+num_epochs: 20
+save_period: 5
+grad_accumulation_steps: 1
+seed: 42
+
+device: auto
+
+num_inference_steps: 100
