@@ -1,5 +1,6 @@
 import torch
 import torchvision
+from torch.nn.utils import clip_grad_norm_
 from tqdm.auto import tqdm
 from .base_trainer import BaseTrainer
 from PIL import Image
@@ -53,9 +54,13 @@ class LoraSDTrainer(BaseTrainer):
             desc="Training",
             total=len(self.train_dataloader),
         ):
-            eeg_embedding = batch["eeg_embedding"].to(self.device, dtype=self.model.dtype)
+            eeg_embedding = batch["eeg_embedding"].to(
+                self.device, dtype=self.model.dtype
+            )
             image_latent = batch["image_latent"].to(self.device, dtype=self.model.dtype)
-            noise = torch.randn(image_latent.shape).to(self.device, dtype=self.model.dtype)
+            noise = torch.randn(image_latent.shape).to(
+                self.device, dtype=self.model.dtype
+            )
             bs = image_latent.shape[0]
             timesteps = torch.randint(
                 0,
@@ -79,13 +84,18 @@ class LoraSDTrainer(BaseTrainer):
             loss.backward()
 
             if (batch_idx + 1) % self.grad_accumulation_steps == 0:
+                if self.clip_grad_norm is not None:
+                    clip_grad_norm_(
+                        self.model.parameters(),
+                        self.clip_grad_norm,
+                    )
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
             train_losses.append(loss.item())
 
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
         return {"train_loss": sum(train_losses) / len(train_losses)}
 
@@ -94,9 +104,15 @@ class LoraSDTrainer(BaseTrainer):
         result = {}
         with torch.no_grad():
             for batch in self.val_dataloader:
-                eeg_embedding = batch["eeg_embedding"].to(self.device, dtype=self.model.dtype)
+                eeg_embedding = batch["eeg_embedding"].to(
+                    self.device,
+                    dtype=self.model.dtype,
+                )
 
-                latents = torch.randn(batch["image_latent"].shape).to(self.device, dtype=self.model.dtype)
+                latents = torch.randn(batch["image_latent"].shape).to(
+                    self.device,
+                    dtype=self.model.dtype,
+                )
                 latents = latents * self.noise_scheduler.init_noise_sigma
 
                 for t in tqdm(self.noise_scheduler.timesteps, desc="Generating"):
