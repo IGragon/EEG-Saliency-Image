@@ -1,1 +1,6 @@
 data
+wandb
+base_models
+runs
+outputs
+*__pycache__*
