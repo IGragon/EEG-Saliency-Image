@@ -177,7 +177,11 @@ class LoraSDTrainer(BaseTrainer):
         self.logger.info(f"Saved checkpoint to {filename}")
 
     def _resume_checkpoint(self, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location=self.device,
+            weights_only=False,
+        )
 
         self.logger.info(f"Loading checkpoint from {checkpoint_path}")
 
@@ -186,6 +190,7 @@ class LoraSDTrainer(BaseTrainer):
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
 
         self._last_epoch = checkpoint["epoch"]
+        self.logger.info(f"Resuming training from {checkpoint_path}")
 
     def _from_pretrained(self, checkpoint_path):
         raise NotImplementedError(

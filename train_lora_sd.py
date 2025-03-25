@@ -1,7 +1,8 @@
+from pathlib import Path
 import hydra
 import torch
-from omegaconf import OmegaConf
 from hydra.utils import instantiate
+from peft import get_peft_model, LoraConfig, PeftModel
 
 from src.trainer.lora_sd_trainer import LoraSDTrainer
 from src.datasets.data_utils import get_dataloaders
@@ -49,25 +50,30 @@ def main(config):
     elif weight_dtype == "fp16":
         weight_dtype = torch.float16
 
-    unet_lora_config = instantiate(
-        config.unet_lora_config,
+    unet_lora_config = LoraConfig(
+        r=config.unet_lora_config.r,
+        lora_alpha=config.unet_lora_config.lora_alpha,
         init_lora_weights="gaussian",
         target_modules=["to_k", "to_q", "to_v", "to_out.0"],
     )
     unet.to(device, dtype=weight_dtype)
     vae.to(device, dtype=weight_dtype)
-    unet.add_adapter(unet_lora_config)
-    
-    try:
-        import xformers
 
-        unet.enable_xformers_memory_efficient_attention()
-        logger.info("Enabled memory efficient attention")
-    except Exception as e:
-        logger.info(f"Failed to enable xformers: {e.__class__.__name__}: {e}")
+    resume_path = config.get("resume_from")
+    if resume_path is not None:
+        resume_path = Path(resume_path)
+        epoch = resume_path.stem.split("-")[-1]
+        unet_lora_path = resume_path.parent / f"unet-{epoch}"
+        unet = PeftModel.from_pretrained(
+            unet,
+            unet_lora_path,
+            is_trainable=True,
+        )
+        logger.info(f"Resuming training from {unet_lora_path}")
+    else:
+        unet = get_peft_model(unet, unet_lora_config)
 
-    lora_layers = list(filter(lambda p: p.requires_grad, unet.parameters()))
-    optimizer = instantiate(config.optimizer, params=lora_layers)
+    optimizer = instantiate(config.optimizer, params=unet.parameters())
     lr_scheduler = (
         instantiate(config.lr_scheduler, optimizer=optimizer)
         if config.get("lr_scheduler")
@@ -75,11 +81,10 @@ def main(config):
     )
     criterion = instantiate(config.criterion)
 
-    logger.info(f"Number of parameters: {sum(p.numel() for p in unet.parameters())}")
+    trainable_params, all_param = unet.get_nb_trainable_parameters()
     logger.info(
-        f"Number of trainable parameters: {sum(p.numel() for p in lora_layers)}"
+        f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param:.4f}"
     )
-
     # load data
     train_dataloader, val_dataloader, dataset = get_dataloaders(config, generator)
 
