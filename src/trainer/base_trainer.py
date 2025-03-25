@@ -29,7 +29,11 @@ class BaseTrainer:
 
         self.num_epochs = self.configuration["num_epochs"]
         self.save_period = self.configuration["save_period"]
-        self.grad_accumulation_steps = self.configuration["grad_accumulation_steps"]
+        self.grad_accumulation_steps = self.configuration.get(
+            "grad_accumulation_steps",
+            1,
+        )
+        self.clip_grad_norm = self.configuration.get("clip_grad_norm", None)
 
         self.device = device
 
@@ -58,7 +62,7 @@ class BaseTrainer:
         for epoch in range(self._last_epoch, self.num_epochs):
             self._last_epoch = epoch
             logs = {"epoch": epoch}
-            
+
             train_result = self._train_epoch()
 
             logs.update(train_result)
