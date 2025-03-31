@@ -74,6 +74,7 @@ def main(config):
         unet = get_peft_model(unet, unet_lora_config)
 
     optimizer = instantiate(config.optimizer, params=unet.parameters())
+    scaler = torch.amp.GradScaler(device, enabled=config.use_amp)
     lr_scheduler = (
         instantiate(config.lr_scheduler, optimizer=optimizer)
         if config.get("lr_scheduler")
@@ -103,6 +104,7 @@ def main(config):
         configuration=config,
         device=device,
         image_class_to_name=dataset.image_classes,
+        scaler=scaler,
     )
     trainer.train()
 
