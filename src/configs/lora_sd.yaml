@@ -5,11 +5,11 @@ noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-
 weight_dtype: fp32
 
 unet_lora_config:
-  r: 8
-  lora_alpha: 16
+  r: 32
+  lora_alpha: 64
 
 optimizer:
-  _target_: torch.optim.Adam
+  _target_: torch.optim.AdamW
   lr: 1e-4
 
 lr_scheduler:
@@ -21,14 +21,15 @@ criterion:
   _target_: torch.nn.MSELoss
 
 
-batch_size: 4
+batch_size: 6
 dataset:
   _target_: src.datasets.EEGEmbToImgDataset
   image_latents_folder: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/training_images_latents
   subject_eeg_embeddings: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/emb_eeg/ATM_S_eeg_features_sub-08_train.pt
+  average_repetitions: True
 
 save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs
-num_epochs: 8
+num_epochs: 32
 save_period: 1
 grad_accumulation_steps: 1
 clip_grad_norm: 1.0
@@ -37,3 +38,4 @@ seed: 42
 device: auto
 
 num_inference_steps: 100
+null_vector_probability: 0.1
