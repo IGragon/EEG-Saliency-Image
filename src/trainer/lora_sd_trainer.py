@@ -65,7 +65,6 @@ class LoraSDTrainer(BaseTrainer):
             )
             if random() < self.null_vector_probability:
                 eeg_embedding = torch.zeros_like(eeg_embedding)
-
             image_latent = batch["image_latent"].to(self.device, dtype=self.model.dtype)
             noise = torch.randn(image_latent.shape).to(
                 self.device, dtype=self.model.dtype
