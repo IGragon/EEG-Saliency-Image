@@ -1,12 +1,13 @@
-model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
-vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
-noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
+vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
+noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
 
-weight_dtype: fp32
+weight_dtype: fp16
+use_amp: True
 
 unet_lora_config:
-  r: 32
-  lora_alpha: 64
+  r: 128
+  lora_alpha: 256
 
 optimizer:
   _target_: torch.optim.AdamW
@@ -21,7 +22,7 @@ criterion:
   _target_: torch.nn.MSELoss
 
 
-batch_size: 6
+batch_size: 8
 dataset:
   _target_: src.datasets.EEGEmbToImgDataset
   image_latents_folder: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/training_images_latents
@@ -30,7 +31,7 @@ dataset:
 
 save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs
 num_epochs: 32
-save_period: 1
+save_period: 2
 grad_accumulation_steps: 1
 clip_grad_norm: 1.0
 seed: 42

@@ -25,6 +25,7 @@ class LoraSDTrainer(BaseTrainer):
         configuration,
         image_class_to_name,
         device,
+        scaler,
     ):
         super().__init__(
             model,
@@ -38,6 +39,7 @@ class LoraSDTrainer(BaseTrainer):
             save_dir,
             configuration,
             device=device,
+            scaler=scaler,
         )
         self.vae = vae
         self.noise_scheduler = noise_scheduler
@@ -49,6 +51,7 @@ class LoraSDTrainer(BaseTrainer):
             "null_vector_probability",
             0.0,
         )
+        self.use_amp = self.configuration.get("use_amp", False)
 
         self.image_class_to_name = image_class_to_name
 
@@ -59,45 +62,46 @@ class LoraSDTrainer(BaseTrainer):
             enumerate(self.train_dataloader),
             desc="Training",
             total=len(self.train_dataloader),
-        ):
-            eeg_embedding = batch["eeg_embedding"].to(
-                self.device, dtype=self.model.dtype
-            )
-            if random() < self.null_vector_probability:
-                eeg_embedding = torch.zeros_like(eeg_embedding)
-            image_latent = batch["image_latent"].to(self.device, dtype=self.model.dtype)
-            noise = torch.randn(image_latent.shape).to(
-                self.device, dtype=self.model.dtype
-            )
-            bs = image_latent.shape[0]
-            timesteps = torch.randint(
-                0,
-                self.noise_scheduler.config.num_train_timesteps,
-                (bs,),
-                device=self.device,
-            )
-            latent_model_input = self.noise_scheduler.add_noise(
-                image_latent,
-                noise,
-                timesteps,
-            ).to(self.device)
+        ):  
+            with torch.autocast(device_type=self.device, dtype=self.model.dtype, enabled=self.use_amp):
+                eeg_embedding = batch["eeg_embedding"].to(self.device)
+                if random() < self.null_vector_probability:
+                    eeg_embedding = torch.zeros_like(eeg_embedding, device=self.device, dtype=self.model.dtype)
 
-            noise_pred = self.model(
-                latent_model_input,
-                timesteps,
-                encoder_hidden_states=eeg_embedding,
-            ).sample
+                image_latent = batch["image_latent"].to(self.device, dtype=self.model.dtype)
+                noise = torch.randn(image_latent.shape, device=self.device, dtype=self.model.dtype)
+                bs = image_latent.shape[0]
+                timesteps = torch.randint(
+                    0,
+                    self.noise_scheduler.config.num_train_timesteps,
+                    (bs,),
+                    device=self.device,
+                )
+                latent_model_input = self.noise_scheduler.add_noise(
+                    image_latent,
+                    noise,
+                    timesteps,
+                ).to(self.device, dtype=self.model.dtype)
 
-            loss = self.criterion(noise_pred, noise)
-            loss.backward()
+                noise_pred = self.model(
+                    latent_model_input,
+                    timesteps,
+                    encoder_hidden_states=eeg_embedding,
+                ).sample
+
+                loss = self.criterion(noise_pred, noise)
+            self.scaler.scale(loss).backward()
 
             if (batch_idx + 1) % self.grad_accumulation_steps == 0:
                 if self.clip_grad_norm is not None:
+                    self.scaler.unscale_(self.optimizer)
                     clip_grad_norm_(
                         self.model.parameters(),
                         self.clip_grad_norm,
                     )
-                self.optimizer.step()
+
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
                 self.optimizer.zero_grad()
 
             train_losses.append(loss.item())
@@ -174,6 +178,7 @@ class LoraSDTrainer(BaseTrainer):
             if self.lr_scheduler is not None
             else None,
             "configuration": self.configuration,
+            "scaler": self.scaler.state_dict(),
         }
         filename = self.checkpoint_dir / (
             f"checkpoint-epoch-{self._last_epoch}.pth"
@@ -194,6 +199,7 @@ class LoraSDTrainer(BaseTrainer):
         self.logger.info(f"Loading checkpoint from {checkpoint_path}")
 
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.scaler.load_state_dict(checkpoint["scaler"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
 

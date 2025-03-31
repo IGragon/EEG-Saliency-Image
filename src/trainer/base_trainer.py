@@ -16,6 +16,7 @@ class BaseTrainer:
         save_dir,
         configuration,
         device,
+        scaler,
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -26,6 +27,7 @@ class BaseTrainer:
         self.logger = logger
         self.writer = writer
         self.configuration = configuration
+        self.scaler = scaler
 
         self.num_epochs = self.configuration["num_epochs"]
         self.save_period = self.configuration["save_period"]
