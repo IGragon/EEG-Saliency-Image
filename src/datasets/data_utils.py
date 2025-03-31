@@ -4,7 +4,7 @@ from torch.utils.data import random_split, DataLoader
 def get_dataloaders(config, generator):
     dataset = instantiate(config.dataset)
 
-    val_batch_size = max(8, config.batch_size)
+    val_batch_size = max(12, config.batch_size)
     train_dataset, val_dataset = random_split(
         dataset,
         [len(dataset) - val_batch_size, val_batch_size],

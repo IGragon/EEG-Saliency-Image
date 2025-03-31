@@ -15,6 +15,7 @@ class EEGEmbToImgDataset(Dataset):
         self,
         image_latents_folder: str,
         subject_eeg_embeddings: str,
+        average_repetitions: bool = False,
     ):
         image_latents_folder = Path(image_latents_folder)
         subject_eeg_embeddings = Path(subject_eeg_embeddings)
@@ -22,6 +23,10 @@ class EEGEmbToImgDataset(Dataset):
 
         # eeg embeddings for one subject are [66160, 1024] that is [training_images * n_repetitions, 1024]
         self.eeg_embeddings = torch.load(subject_eeg_embeddings)
+        self.average_repetitions = average_repetitions
+        
+        if self.average_repetitions:
+            self.eeg_embeddings = self.eeg_embeddings.reshape(-1, 4, 1024).mean(dim=1)
 
         # image latents are [training_images, 4, 64, 64]
         self.image_latents = torch.cat(
@@ -51,7 +56,11 @@ class EEGEmbToImgDataset(Dataset):
 
         # because for each image we have 4 repetitions of
         # perception of the same image
-        image_index = idx // 4
+        if self.average_repetitions:
+            image_index = idx
+        else:
+            image_index = idx // 4
+
         image_latent = self.image_latents[image_index]
         image_class = self.img_index_to_class_index[image_index]
 

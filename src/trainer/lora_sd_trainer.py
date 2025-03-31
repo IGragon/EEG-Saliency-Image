@@ -5,6 +5,7 @@ from tqdm.auto import tqdm
 from .base_trainer import BaseTrainer
 from PIL import Image
 import wandb
+from random import random
 
 
 class LoraSDTrainer(BaseTrainer):
@@ -44,6 +45,11 @@ class LoraSDTrainer(BaseTrainer):
         num_inference_steps = self.configuration["num_inference_steps"]
         self.noise_scheduler.set_timesteps(num_inference_steps, device=self.device)
 
+        self.null_vector_probability = self.configuration.get(
+            "null_vector_probability",
+            0.0,
+        )
+
         self.image_class_to_name = image_class_to_name
 
     def _train_epoch(self):
@@ -57,6 +63,8 @@ class LoraSDTrainer(BaseTrainer):
             eeg_embedding = batch["eeg_embedding"].to(
                 self.device, dtype=self.model.dtype
             )
+            if random() < self.null_vector_probability:
+                eeg_embedding = torch.zeros_like(eeg_embedding)
             image_latent = batch["image_latent"].to(self.device, dtype=self.model.dtype)
             noise = torch.randn(image_latent.shape).to(
                 self.device, dtype=self.model.dtype
@@ -131,15 +139,15 @@ class LoraSDTrainer(BaseTrainer):
 
                 images = self.decode_from_latent_space(latents)
                 grid = torchvision.utils.make_grid(
-                    images, nrow=batch["image_latent"].shape[0]
+                    images,
+                    nrow=4,
                 )
                 np_grid = grid.permute(1, 2, 0).cpu().numpy().clip(-1, 1) * 0.5 + 0.5
-                image_class_names = "img_cls_names: " + ";".join(
-                    [
-                        self.image_class_to_name[idx]
-                        for idx in batch["image_class"].tolist()
-                    ]
-                )
+                image_class_names = [
+                    self.image_class_to_name[idx]
+                    for idx in batch["image_class"].tolist()
+                ]
+                image_class_names = "img_cls_names: " + "\n".join(";".join(image_class_names[i : i + 4]) for i in range(0, len(image_class_names), 4))
                 image_indexes = "img_ids: " + ";".join(
                     [str(idx) for idx in batch["image_index"].tolist()]
                 )
