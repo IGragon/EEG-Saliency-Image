@@ -9,3 +9,5 @@ eval:
   saliency_dir_gt: "data/test/saliency"
   saliency_dir_gen: "outputs/test/saliency"
   extensions: [".jpg", ".png"]
+  output_image_csv: "metrics_image.csv"
+  output_saliency_csv: "metrics_saliency.csv"
