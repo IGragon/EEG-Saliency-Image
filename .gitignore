@@ -4,3 +4,4 @@ base_models
 runs
 outputs
 *__pycache__*
+*.pth
