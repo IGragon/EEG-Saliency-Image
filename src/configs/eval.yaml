@@ -1,0 +1,13 @@
+# configs/eval.yaml
+defaults:
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+eval:
+  image_dir_gt: "data/test/images"       # Ground truth images
+  image_dir_gen: "outputs/test/images"   # Generated images
+  saliency_dir_gt: "data/test/saliency"
+  saliency_dir_gen: "outputs/test/saliency"
+  extensions: [".jpg", ".png"]
+  output_image_csv: "metrics_image.csv"
+  output_saliency_csv: "metrics_saliency.csv"
