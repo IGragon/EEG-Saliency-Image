@@ -5,3 +5,5 @@ runs
 outputs
 *__pycache__*
 *.pth
+*.csv
+evals
