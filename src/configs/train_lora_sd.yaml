@@ -7,7 +7,7 @@ data_config:
 
   batch_size: 8
   val_batch_size: 10
-  average_repetitions: true
+  average_repetitions: false
 
 model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
 vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
@@ -26,7 +26,7 @@ optimizer:
 
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
-  T_0: 2000
+  T_0: 5000
   eta_min: 1e-5
 
 criterion:
