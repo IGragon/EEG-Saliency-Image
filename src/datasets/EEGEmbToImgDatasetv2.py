@@ -11,6 +11,7 @@ IMAGE_TRANSFORMS = tt.Compose(
     [
         tt.Resize(512),
         tt.ToTensor(),
+        tt.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
     ]
 )
 
@@ -55,19 +56,23 @@ class EEGEmbToImgDataset(Dataset):
             image = self.get_image(image_idx)
 
         return {
-            "eeg_embedding": self.eeg_embeddings[image_idx][repetition_idx].unsqueeze(0),
+            "eeg_embedding": self.eeg_embeddings[image_idx][repetition_idx].unsqueeze(
+                0
+            ),
             "image_latent": image_latent,
             "image": image,
         }
 
     def get_image(self, image_idx):
-        return IMAGE_TRANSFORMS(
-            Image.open(
-                self.images_folder_path
-                / self.image_class_names[image_idx]
-                / self.image_names[image_idx]
-            )
-        ) * 2 - 1
+        return (
+            IMAGE_TRANSFORMS(
+                Image.open(
+                    self.images_folder_path
+                    / self.image_class_names[image_idx]
+                    / self.image_names[image_idx]
+                )
+            ) * 2 - 1
+        )
 
     def __len__(self):
         return len(self.eeg_embeddings) * self.eeg_repetitions

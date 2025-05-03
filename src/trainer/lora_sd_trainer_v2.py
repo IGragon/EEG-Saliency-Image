@@ -7,9 +7,27 @@ from .base_trainer import BaseTrainer
 from PIL import Image
 import wandb
 from random import random, randint
+from skimage.metrics import structural_similarity as ssim
+from skimage.color import rgb2gray
+
 
 def pixel_correlation(img1, img2):
     return np.corrcoef(img1.flatten(), img2.flatten())[0, 1]
+
+
+def compute_ssim(img1: np.ndarray, img2: np.ndarray):
+    img1 = img1.transpose(1, 2, 0).clip(-1, 1) * 0.5 + 0.5
+    img2 = img2.transpose(1, 2, 0).clip(-1, 1) * 0.5 + 0.5
+    return ssim(
+        rgb2gray(img1),
+        rgb2gray(img2),
+        multichannel=True,
+        gaussian_weights=True,
+        sigma=1.5,
+        use_sample_covariance=False,
+        data_range=1.0,
+    )
+
 
 class LoraSDTrainer(BaseTrainer):
     def __init__(
@@ -128,6 +146,7 @@ class LoraSDTrainer(BaseTrainer):
         self.vae.eval()
         result = {}
         pix_corr = []
+        ssim_scores = []
         save_img_batch = randint(0, len(self.val_dataloader) - 1)
         with torch.no_grad():
             for batch_idx, batch in tqdm(
@@ -137,7 +156,9 @@ class LoraSDTrainer(BaseTrainer):
             ):
                 # пусть будет, там оно что-то запоминает и потом когда последний батч меньшего размера, то падает с ошибкой
                 # а метод set_timesteps сбрасывает накопленные настройки
-                self.noise_scheduler.set_timesteps(self.num_inference_steps, device=self.device)
+                self.noise_scheduler.set_timesteps(
+                    self.num_inference_steps, device=self.device
+                )
 
                 with torch.autocast(
                     device_type=self.device,
@@ -148,7 +169,6 @@ class LoraSDTrainer(BaseTrainer):
                         self.device,
                         dtype=self.model.dtype,
                     )
-                    images = batch["image"]
 
                     latents = torch.randn((len(eeg_embedding), 4, 64, 64)).to(
                         self.device,
@@ -169,16 +189,29 @@ class LoraSDTrainer(BaseTrainer):
                             noise_pred, t, latents
                         ).prev_sample
 
+                    images = batch["image"]
                     generated_images = self.decode_from_latent_space(latents.detach())
-                    pix_corr_batch = [
-                        pixel_correlation(gen, real)
-                        for gen, real in zip(generated_images.cpu().numpy(), images.cpu().numpy())
-                    ]
-                    pix_corr.extend(pix_corr_batch)
+                    ssim_scores.extend(
+                        [
+                            compute_ssim(gen, real)
+                            for gen, real in zip(
+                                generated_images.cpu().numpy(), images.cpu().numpy()
+                            )
+                        ]
+                    )
+                    pix_corr.extend(
+                        [
+                            pixel_correlation(gen, real)
+                            for gen, real in zip(
+                                generated_images.cpu().numpy(), images.cpu().numpy()
+                            )
+                        ]
+                    )
 
                 if batch_idx == save_img_batch:
                     result.update(self.get_images_for_logging(generated_images, images))
-        result["pix_corr"] = sum(pix_corr) / len(pix_corr)
+        result["pix_corr"] = np.mean(pix_corr)
+        result["ssim"] = np.mean(ssim_scores)
         return False, result
 
     @torch.no_grad()
