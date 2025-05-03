@@ -93,7 +93,7 @@ class ControlnetTrainer(BaseTrainer):
                     timesteps,
                 )
 
-                controlnet_image = batch["conditioning_pixel_values"].to(dtype=self.model.dtype)
+                controlnet_image = batch["saliency_map"].to(device=self.device, dtype=self.model.dtype)
 
                 down_block_res_samples, mid_block_res_sample = self.model(
                     latent_model_input,
@@ -114,6 +114,7 @@ class ControlnetTrainer(BaseTrainer):
                 ).sample
 
                 loss = self.criterion(noise_pred, noise)
+
             self.scaler.scale(loss).backward()
             if (batch_idx + 1) % self.grad_accumulation_steps == 0:
                 if self.clip_grad_norm is not None:
@@ -131,6 +132,7 @@ class ControlnetTrainer(BaseTrainer):
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+
 
         return {"train_loss": sum(train_losses) / len(train_losses)}
     

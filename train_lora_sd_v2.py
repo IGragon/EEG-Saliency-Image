@@ -18,7 +18,6 @@ def main(config):
     set_random_seed(config.seed)
     generator = torch.Generator().manual_seed(config.seed)
     logger = getLogger(__name__)
-    run = init_wandb(config)
 
     if config.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -91,6 +90,7 @@ def main(config):
         config.data_config, generator, config.seed
     )
 
+    run = init_wandb(config)
     trainer = LoraSDTrainer(
         model=unet,
         vae=vae,

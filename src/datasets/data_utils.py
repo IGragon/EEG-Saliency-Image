@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import random_split, DataLoader
 from sklearn.model_selection import train_test_split
 from src.datasets.EEGEmbToImgDatasetv2 import EEGEmbToImgDataset
+from hydra.utils import instantiate
 
 
 # def get_dataloaders(config, generator):
@@ -36,21 +37,20 @@ def get_dataloaders(data_config: dict, generator: torch.Generator, random_state:
         random_state=random_state,
     )
 
-    train_dataset = EEGEmbToImgDataset(
+    train_dataset = instantiate(
+        data_config.dataset,
         image_class_names=train_df["img_cls_name"].to_list(),
         image_names=train_df["img_name"].to_list(),
-        images_latents_folder_path=data_config["images_latents_folder_path"],
         subject_eeg_embeddings=train_subject_eeg_emb,
         eeg_repetitions=eeg_repetitions,
         average_repetitions=data_config["average_repetitions"],
     )
-    val_dataset = EEGEmbToImgDataset(
+    val_dataset = instantiate(
+        data_config.dataset,
         image_class_names=val_df["img_cls_name"].to_list(),
         image_names=val_df["img_name"].to_list(),
-        images_latents_folder_path=data_config["images_latents_folder_path"],
         subject_eeg_embeddings=val_subject_eeg_emb,
         eeg_repetitions=eeg_repetitions,
-        images_folder_path=data_config["images_folder_path"],
         is_train_split=False,
         average_repetitions=data_config["average_repetitions"],
     )
