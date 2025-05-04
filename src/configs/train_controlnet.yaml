@@ -44,4 +44,4 @@ device: auto
 num_inference_steps: 25
 null_vector_probability: 0.1
 
-# resume_from: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs/usual-monkey-149-base-v2-training/checkpoint-epoch-13.pth
+# resume_from: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs/dainty-sky-172/checkpoint-epoch-12.pth
