@@ -21,23 +21,23 @@ class EEGSaliencyDataset(Dataset):
         self,
         image_class_names: list[str],
         image_names: list[str],
-        images_latents_folder_path: str,
         saliency_maps_foler_path: str,
         subject_eeg_embeddings: str,
         eeg_repetitions: int,
         images_folder_path: str = None,
+        images_latents_folder_path: str = None,
         is_train_split: bool = True,
         average_repetitions: bool = False,
     ):
         self.image_class_names = image_class_names
         self.image_names = image_names
-        self.images_latents_folder_path = Path(images_latents_folder_path)
         self.saliency_maps_foler_path = Path(saliency_maps_foler_path)
         self.is_train_split = is_train_split
         self.average_repetitions = average_repetitions
         self.eeg_repetitions = eeg_repetitions if not self.average_repetitions else 1
 
         if self.is_train_split:
+            self.images_latents_folder_path = Path(images_latents_folder_path)
             self.image_latents = self._get_latents()
         else:
             self.images_folder_path = Path(images_folder_path)
@@ -51,11 +51,10 @@ class EEGSaliencyDataset(Dataset):
         image_idx = idx // self.eeg_repetitions
         repetition_idx = idx % self.eeg_repetitions
         image_latent = -1
-        saliency_map = -1
+        saliency_map = self.get_smap(image_idx)
         image = -1
         if self.is_train_split:
             image_latent = self.image_latents[image_idx]
-            saliency_map = self.get_smap(image_idx)
         else:
             image = self.get_image(image_idx)
 
