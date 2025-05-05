@@ -11,7 +11,7 @@ data_config:
 
   batch_size: 8
   val_batch_size: 10
-  average_repetitions: false
+  average_repetitions: true
 
 model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
 vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base-fp16
@@ -26,18 +26,18 @@ unet_lora_config:
 
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 1e-4
+  lr: 2e-4
 
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
   T_0: 5000
-  eta_min: 1e-5
+  eta_min: 1e-6
 
 criterion:
   _target_: torch.nn.MSELoss
 
 save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs
-num_epochs: 32
+num_epochs: 200
 save_period: 1
 grad_accumulation_steps: 1
 clip_grad_norm: 1.0
@@ -48,4 +48,4 @@ device: auto
 num_inference_steps: 50
 null_vector_probability: 0.1
 
-resume_from: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs/usual-monkey-149-base-v2-training/checkpoint-epoch-13.pth
+resume_from: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs/cerulean-dream-160/checkpoint-epoch-31.pth
