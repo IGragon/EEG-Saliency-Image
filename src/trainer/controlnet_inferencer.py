@@ -17,6 +17,7 @@ class ControlnetInferencer:
         image_paths,
         device,
         scaler,
+        guidance,
     ):
         self.unet = unet
         self.vae = vae
@@ -40,6 +41,7 @@ class ControlnetInferencer:
 
         save_dir = Path(save_dir)
         self.save_dir = save_dir
+        self.guidance = guidance
     
     def eval(self):
         self.model.eval()
@@ -67,6 +69,12 @@ class ControlnetInferencer:
                         self.device,
                         dtype=self.model.dtype,
                     )
+                    controlnet_image = batch["saliency_map"].to(device=self.device, dtype=self.model.dtype)
+                    controlnet_image = torch.cat([controlnet_image] * 2)
+
+                    zero_embeddings = torch.zeros_like(eeg_embedding)
+
+                    all_embeddings = torch.concatenate([eeg_embedding, zero_embeddings], dim=0)
 
                     latents = torch.randn((len(eeg_embedding), 4, 64, 64)).to(
                         self.device,
@@ -74,16 +82,16 @@ class ControlnetInferencer:
                     )
                     latents = latents * self.noise_scheduler.init_noise_sigma
                     for t in self.noise_scheduler.timesteps:
+                        latent_model_input = torch.cat([latents] * 2)
                         latent_model_input = self.noise_scheduler.scale_model_input(
-                            latents, t
+                            latent_model_input, t
                         )
 
-                        controlnet_image = batch["saliency_map"].to(device=self.device, dtype=self.model.dtype)
 
                         down_block_res_samples, mid_block_res_sample = self.model(
                             latent_model_input,
                             t,
-                            encoder_hidden_states=eeg_embedding,
+                            encoder_hidden_states=all_embeddings,
                             controlnet_cond=controlnet_image,
                             return_dict=False,
                         )
@@ -91,12 +99,15 @@ class ControlnetInferencer:
                         noise_pred = self.unet(
                             latent_model_input,
                             t,
-                            encoder_hidden_states=eeg_embedding,
+                            encoder_hidden_states=all_embeddings,
                             down_block_additional_residuals=[
                                 sample.to(dtype=self.model.dtype) for sample in down_block_res_samples
                             ],
                             mid_block_additional_residual=mid_block_res_sample.to(dtype=self.model.dtype),
                         ).sample
+
+                        noise_pred_emb, noise_pred_uncond = noise_pred.chunk(2)
+                        noise_pred = noise_pred_uncond + self.guidance * (noise_pred_emb - noise_pred_uncond)
 
                         latents = self.noise_scheduler.step(
                             noise_pred, t, latents

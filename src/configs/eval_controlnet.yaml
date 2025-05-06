@@ -1,4 +1,4 @@
-model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/cerulean-dream-160-epoch-30-merged
+model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stellar-carrier-175-epoch-128-merged
 vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
 noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
 
@@ -12,10 +12,11 @@ save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/evals/
 images_folder_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/test_images
 
 
-device: cuda
+device: auto
 weight_dtype: fp32
 use_amp: false
 
 num_inference_steps: 100
-batch_size: 8
+batch_size: 4
 seed: 42
+guidance: 4 # for no guidance put 1

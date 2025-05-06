@@ -100,6 +100,7 @@ def main(config):
         image_paths=sorted(Path(config.images_folder_path).glob("*/*.jpg")),
         device=device,
         scaler=scaler,
+        guidance=config.guidance,
     )
     inferencer.eval()
 
