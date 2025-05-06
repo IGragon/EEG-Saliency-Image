@@ -13,7 +13,7 @@ data_config:
   val_batch_size: 10
   average_repetitions: true
 
-model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/cerulean-dream-160-epoch-30-merged
+model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stellar-carrier-175-epoch-128-merged
 vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
 noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
 
@@ -34,7 +34,7 @@ criterion:
 
 save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs
 num_epochs: 32
-save_period: 1
+save_period: 2
 grad_accumulation_steps: 4
 clip_grad_norm: 1.0
 seed: 42
