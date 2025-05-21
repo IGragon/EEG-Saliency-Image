@@ -2,9 +2,9 @@ from pathlib import Path
 import hydra
 import torch
 from hydra.utils import instantiate
-from peft import get_peft_model, LoraConfig, PeftModel
+from diffusers import ControlNetModel
 
-from src.trainer.lora_sd_trainer_v2 import LoraSDTrainer
+from src.trainer.controlnet_trainer import ControlnetTrainer
 from src.datasets.data_utils import get_dataloaders
 from src.utils.init_utils import init_wandb, set_random_seed
 from diffusers.models.unets.unet_2d_condition import UNet2DConditionModel
@@ -13,7 +13,7 @@ from diffusers.schedulers.scheduling_pndm import PNDMScheduler
 from logging import getLogger
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="train_lora_sd")
+@hydra.main(version_base=None, config_path="src/configs", config_name="train_controlnet")
 def main(config):
     set_random_seed(config.seed)
     generator = torch.Generator().manual_seed(config.seed)
@@ -47,12 +47,6 @@ def main(config):
     elif weight_dtype == "fp16":
         weight_dtype = torch.float16
 
-    unet_lora_config = LoraConfig(
-        r=config.unet_lora_config.r,
-        lora_alpha=config.unet_lora_config.lora_alpha,
-        init_lora_weights="gaussian",
-        target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-    )
     unet.to(device, dtype=weight_dtype)
     vae.to(device, dtype=weight_dtype)
     unet.requires_grad_(False)
@@ -62,17 +56,16 @@ def main(config):
     if resume_path is not None:
         resume_path = Path(resume_path)
         epoch = resume_path.stem.split("-")[-1]
-        unet_lora_path = resume_path.parent / f"unet-{epoch}"
-        unet = PeftModel.from_pretrained(
-            unet,
-            unet_lora_path,
-            is_trainable=True,
-        )
-        logger.info(f"Resuming training from {unet_lora_path}")
+        controlnet_path = resume_path.parent / f"controlnet-{epoch}"
+        controlnet = ControlNetModel.from_pretrained(controlnet_path)
+        logger.info(f"Resuming training from {controlnet_path}")
     else:
-        unet = get_peft_model(unet, unet_lora_config)
+        controlnet = ControlNetModel.from_unet(unet)
+    
+    controlnet.to(device, dtype=weight_dtype)
+    controlnet.requires_grad_(True)
 
-    optimizer = instantiate(config.optimizer, params=unet.parameters())
+    optimizer = instantiate(config.optimizer, params=controlnet.parameters())
     scaler = torch.amp.GradScaler(device, enabled=config.use_amp)
     lr_scheduler = (
         instantiate(config.lr_scheduler, optimizer=optimizer)
@@ -81,18 +74,15 @@ def main(config):
     )
     criterion = instantiate(config.criterion)
 
-    trainable_params, all_param = unet.get_nb_trainable_parameters()
-    logger.info(
-        f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param:.4f}"
-    )
     # load data
     train_dataloader, val_dataloader = get_dataloaders(
         config.data_config, generator, config.seed
     )
 
     run = init_wandb(config)
-    trainer = LoraSDTrainer(
-        model=unet,
+    trainer = ControlnetTrainer(
+        controlnet=controlnet,
+        unet=unet,
         vae=vae,
         noise_scheduler=noise_scheduler,
         train_dataloader=train_dataloader,

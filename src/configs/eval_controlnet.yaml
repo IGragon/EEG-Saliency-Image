@@ -1,0 +1,22 @@
+model_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stellar-carrier-175-epoch-128-merged
+vae_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+noise_scheduler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/base_models/stable-diffusion-2-1-base
+
+
+resume_from: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/runs/sith-midichlorian-176/controlnet-31
+data_df: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/test_images.csv
+subject_eeg_embeddings: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/emb_eeg/ATM_S_eeg_features_sub-08_test.pt
+saliency_maps_foler_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/test_images_saliency_maps
+
+save_dir: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/evals/sith-midichlorian-176-controlnet-31-guidance-2
+images_folder_path: /home/igragon/Projects/innopolis_thesis_2025/EEG-Salience-Image/data/images/test_images
+
+
+device: auto
+weight_dtype: fp32
+use_amp: false
+
+num_inference_steps: 100
+batch_size: 4
+seed: 42
+guidance: 2 # for no guidance put 1
