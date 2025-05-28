@@ -9,6 +9,7 @@ from skimage.metrics import structural_similarity as ssim
 import torch
 from torchvision import transforms
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from torchvision.models import alexnet, AlexNet_Weights
 from torchvision.models import inception_v3, Inception_V3_Weights
@@ -54,11 +55,12 @@ def pix_corr(all_images, all_brain_recons):
     print(all_images_flattened.shape)
     print(all_brain_recons_flattened.shape)
 
-    corrsum = 0
+    corr_coefs = []
     for i in tqdm(range(len(all_brain_recons_flattened))):
-        corrsum += np.corrcoef(all_images_flattened[i], all_brain_recons_flattened[i])[0][1]
-    corrmean = corrsum / len(all_brain_recons_flattened)
-    return corrmean
+        corr_coefs.append(
+            np.corrcoef(all_images_flattened[i], all_brain_recons_flattened[i])[0][1]
+        )
+    return np.mean(corr_coefs), corr_coefs
 
 def ssim_score(all_images, all_brain_recons):
     preprocess = transforms.Compose([
@@ -75,7 +77,7 @@ def ssim_score(all_images, all_brain_recons):
         ssim_score.append(ssim(rec, im, multichannel=True, gaussian_weights=True, sigma=1.5, use_sample_covariance=False, data_range=1.0))
 
     ssim_metric = np.mean(ssim_score)
-    return ssim_metric
+    return ssim_metric, ssim_score
 
 
 def alexnet_scores(all_images, all_brain_recons):
@@ -140,7 +142,7 @@ def clip_score(all_images, all_brain_recons):
                                             clip_model.encode_image, preprocess, None) # final layer
     clip_ = np.mean(all_per_correct)
     print(f"2-way Percent Correct: {clip_:.4f}")
-    return clip_
+    return clip_, all_per_correct
 
 def swav_score(all_images, all_brain_recons):
     swav_model = torch.hub.load('facebookresearch/swav:main', 'resnet50')
@@ -159,10 +161,10 @@ def swav_score(all_images, all_brain_recons):
     fake = swav_model(preprocess(all_brain_recons).to(device))['avgpool']
     fake = fake.reshape(len(fake),-1).cpu().numpy()
 
-    swav = np.array([sp.spatial.distance.correlation(gt[i],fake[i]) for i in range(len(gt))]).mean()
-    print("Distance:",swav)
+    swav = np.array([sp.spatial.distance.correlation(gt[i],fake[i]) for i in range(len(gt))])
+    print("Distance:",swav.mean())
 
-    return swav
+    return swav.mean(), swav
 
 
 if __name__ == "__main__":
@@ -181,5 +183,19 @@ if __name__ == "__main__":
         read_image(img_path, "RGB").unsqueeze(0) / 255
         for img_path in sorted(generated_images_folder.glob("*/*.jpg"))
     ])
+
+    pix_corr_score, pixcorr_scores = pix_corr(all_images, all_brain_recons)
+    ssim_value, ssim_scores = ssim_score(all_images, all_brain_recons)
+    alexnet2, alexnet5 = alexnet_scores(all_images, all_brain_recons)
+    inception_score = inception_v3_score(all_images, all_brain_recons)
+    clip_score_value, clip_scores = clip_score(all_images, all_brain_recons)
+    swav_score_value, swav_scores = swav_score(all_images, all_brain_recons)
+
+    pd.DataFrame({
+        "pix_corr": pixcorr_scores,
+        "ssim": ssim_scores,
+        "clip": clip_scores,
+        "swav": swav_scores,
+    }).to_csv(generated_images_folder / "metrics.csv")
     # Model |        pixcorr (higher) | SSIM (higher)|  alexnet2 (higher) |  alexnet5 (higher) |  inception (higher) |CLIP (higher)|  swav (lower)
-    print(f"{generated_images_folder.name} | {pix_corr(all_images, all_brain_recons):.3f} | {ssim_score(all_images, all_brain_recons):.3f} | {'|'.join([str(round(x, 3)) for x in alexnet_scores(all_images, all_brain_recons)])} | {inception_v3_score(all_images, all_brain_recons):.3f} | {clip_score(all_images, all_brain_recons):.3f} | {swav_score(all_images, all_brain_recons):.3f}")
+    print(f"{generated_images_folder.name} | {pix_corr_score:.3f} | {ssim_value:.3f} | {alexnet2:.3f} | {alexnet5:.3f} | {inception_score:.3f} | {clip_score_value:.3f} | {swav_score_value:.3f}")

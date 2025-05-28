@@ -7,3 +7,4 @@ outputs
 *.pth
 *.csv
 evals
+assets
