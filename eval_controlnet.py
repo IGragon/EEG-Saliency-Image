@@ -61,11 +61,6 @@ def main(config):
 
     scaler = torch.amp.GradScaler(device, enabled=config.use_amp)
 
-    # load data
-    # train_dataloader, val_dataloader = get_dataloaders(
-    #     config.data_config, generator, config.seed
-    # )
-
     test_data_df = pd.read_csv(config["data_df"])
     eeg_repetitions = 1
     subject_eeg_embeddings = torch.load(config["subject_eeg_embeddings"]).reshape(
