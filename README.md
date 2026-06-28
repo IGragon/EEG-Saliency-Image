@@ -1,3 +1,11 @@
+# EEG-Driven Image Reconstruction with Saliency-Guided Diffusion Models
+
+[![ACM MM 2025](https://img.shields.io/badge/ACM%20MM%202025-10.1145/3746027.3754476-blue?logo=acm)](https://dl.acm.org/doi/abs/10.1145/3746027.3754476)
+
+[![arXiv](https://img.shields.io/badge/arXiv-2510.26391-b31b1b.svg)](https://arxiv.org/abs/2510.26391) 
+
+
+
 ## Setup conda environment
 
 Follow miniconda installation tutorial: https://www.anaconda.com/docs/getting-started/miniconda/install
